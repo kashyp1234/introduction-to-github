@@ -1,0 +1,159 @@
+import pygame
+import random
+import os
+
+# Initialize Pygame
+pygame.init()
+
+# Set window size
+width, height = 800, 600
+gamewindow = pygame.display.set_mode((width, height))
+pygame.display.set_caption("KASHYPANAND'S Game)
+                           
+# Colors
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+BLACK = (0, 0, 0)
+YELLOW = (255, 255, 0)
+LIGHT_BROWN = (205, 133, 63)
+LIGHT_RED = (255, 102, 102)
+
+# Game variables
+player = pygame.Rect(width // 2 - 20, height - 50, 40, 40)
+stars = []
+star_speed = 3
+max_stars = 8
+game_over = False
+start_time = pygame.time.get_ticks()
+show_guide = True  # Show guide at the start
+
+# Load images
+image_path = "pikachu.png"
+if os.path.exists(image_path):
+    pikachu = pygame.image.load(image_path)
+    pikachu = pygame.transform.scale(pikachu, (100, 100))  # Scale the image
+else:
+    pikachu = pygame.Surface((50, 50))  # Placeholder square
+    pikachu.fill(YELLOW)
+
+gameover_path = "GAMEOVER.png"
+if os.path.exists(gameover_path):
+    GAMEOVER_img = pygame.image.load(gameover_path)
+    GAMEOVER_img = pygame.transform.scale(GAMEOVER_img, (300, 200))  # Scale the image
+else:
+    GAMEOVER_img = None  # If missing, show text instead
+
+# Font
+font = pygame.font.SysFont("comicsans", 30)
+large_font = pygame.font.SysFont(None, 80)
+
+# Functions
+def draw_player():
+    pygame.draw.rect(gamewindow, LIGHT_RED, player)
+
+def draw_pikachu():
+    gamewindow.blit(pikachu, (10, 10))
+
+def spawn_star():
+    if len(stars) < max_stars and random.random() < 0.05:
+        x = random.randint(10, width - 20)
+        radius = random.randint(10, 20)
+        stars.append({"x": x, "y": -radius, "radius": radius, "speed": random.uniform(2, 4)})
+
+def update_stars():
+    global game_over
+    for star in stars[:]:
+        star["y"] += star["speed"]
+        if star["y"] > height:
+            stars.remove(star)
+
+        if player.colliderect(pygame.Rect(star["x"] - star["radius"], star["y"] - star["radius"], star["radius"] * 2, star["radius"] * 2)):
+            game_over = True
+
+def draw_stars():
+    for star in stars:
+        pygame.draw.circle(gamewindow, WHITE, (int(star["x"]), int(star["y"])), star["radius"])
+
+def show_game_over():
+    gamewindow.fill(BLACK)
+
+    if GAMEOVER_img:  
+        # Display the image first
+        gamewindow.blit(GAMEOVER_img, (width // 2 - 150, height // 3 - 100))  
+
+    # Display "Game Over!!!" text below the image
+    text = large_font.render("Game Over!!!", True, RED)
+    text_rect = text.get_rect(center=(width // 2, height // 2 + 50))
+    gamewindow.blit(text, text_rect)
+
+    # Display restart instructions
+    restart_text = font.render("Press K to Restart or D to Quit", True, WHITE)
+    restart_rect = restart_text.get_rect(center=(width // 2, height // 2 + 120))
+    gamewindow.blit(restart_text, restart_rect)
+
+def show_guide_screen():
+    gamewindow.fill(LIGHT_BROWN)
+    guide_text = [
+        "HOW TO PLAY:",
+        "Move with Arrow Keys",
+        "Avoid falling objects!",
+         "THE PLAYER IS DOWN SO FIRST GO UPWARDS",
+        "Press SPACE to Start",  # This will be highlighted in red
+    ]
+
+    y_offset = height // 5
+    for line in guide_text:
+        # Highlight "Press SPACE to Start" in red, others in white
+        if line == "Press SPACE to Start":
+            text = font.render(line, True, RED)
+        else:
+            text = font.render(line, True, WHITE)
+
+        gamewindow.blit(text, (width // 3, y_offset))
+        y_offset += 50  # Adjust spacing between lines
+
+# Main loop
+clock = pygame.time.Clock()
+run = True
+while run:
+    gamewindow.fill((0, 0, 0))  # Ensure proper clearing of screen
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            run = False
+        if event.type == pygame.KEYDOWN:
+            if show_guide and event.key == pygame.K_SPACE:
+                show_guide = False  # Hide guide and start game
+            elif game_over:
+                if event.key == pygame.K_k:  # Restart game
+                    game_over = False
+                    player.x = width // 2 - 20
+                    player.y = height - 50
+                    stars.clear()
+                    start_time = pygame.time.get_ticks()
+                elif event.key == pygame.K_d:  # Quit game
+                    run = False
+
+    keys = pygame.key.get_pressed()
+    if show_guide:
+        show_guide_screen()
+    elif not game_over:
+        if keys[pygame.K_LEFT] and player.x > 0:
+            player.x -= 5
+        if keys[pygame.K_RIGHT] and player.x < width - player.width:
+            player.x += 5
+        if keys[pygame.K_UP] and player.y > 0:
+            player.y -= 5
+        if keys[pygame.K_DOWN] and player.y < height - player.height:
+            player.y += 5
+        spawn_star()
+        update_stars()
+        draw_stars()
+        draw_player()
+        draw_pikachu()
+    else:
+        show_game_over()
+
+    pygame.display.update()
+    clock.tick(60)
+
+pygame.quit()
